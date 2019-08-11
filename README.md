@@ -7,6 +7,15 @@ This is a helper module which brings react native as an engine to drive share ex
     <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/android-demo.gif" />
 </p>
 
+# Features
+
+- You can share within your app:
+  - a list of images,
+  - text
+  - url
+  - messages (from whatsapp for instance, we get either the text or the image)
+- Return an array like `[{type, value}]`
+
 # Installation
 
 Installation should be very easy by just installing it from npm.
@@ -112,7 +121,7 @@ The setup requires a little bit more work. I will try to describe as detail as p
 
 - Now go back to your extension file (in my case `MyShareEx.m`) and paste the following code there **being sure to substitute `MyShareEx` in all three places for whatever you chose above**
 
-> If your project entry is `index.js` instead of `index.ios.js` then needs to replace `@"index.ios"` with `@"index"`
+> If your project entry is `index.js` instead of `index.ios.js` then needs to replace `@"index.ios"` with `@"index"`
 
 ```objective-c
 #import <Foundation/Foundation.h>
@@ -150,15 +159,21 @@ RCT_EXPORT_MODULE();
 
 # Set the NSExtensionActivationRule key in your Info.plist
 
-For the time being, this package only handles sharing of urls specifically from browsers. In order to tell the system to show your extension only when sharing a url, you must set the `NSExtensionActivationRule` key (under `NSExtensionAttributes`) in the share extension's Info.plist file as follows (this is also needed to pass Apple's reveiw):
+For the time being, this package handles sharing of urls, text or images. In order to tell the system to show your extension only when type is supported, you must set the `NSExtensionActivationRule` key (under `NSExtensionAttributes`) in the share extension's Info.plist file as follows (this is also needed to pass Apple's review):
 
 ```
 <key>NSExtensionAttributes</key>
 <dict>
   <key>NSExtensionActivationRule</key>
   <dict>
-    <key>NSExtensionActivationSupportsWebURLWithMaxCount</key>
-    <integer>1</integer>
+  <key>NSExtensionActivationSupportsImageWithMaxCount</key>
+  <integer>2</integer>
+  <key>NSExtensionActivationSupportsMovieWithMaxCount</key>
+  <integer>0</integer>
+  <key>NSExtensionActivationSupportsText</key>
+  <true/>
+  <key>NSExtensionActivationSupportsWebURLWithMaxCount</key>
+  <integer>1</integer>
   </dict>
 </dict>
 ```
@@ -171,9 +186,7 @@ Note that while the above will prevent many apps from wrongly sharing using your
 
 For reference about `NSExtensionActivationRule` checkout [Apple's docs](https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/ExtensionScenarios.html#//apple_ref/doc/uid/TP40014214-CH21-SW8)
 
-
 - Try to build the project, it should now build successfully!
-
 
 ## Android
 
@@ -242,7 +255,7 @@ import java.util.List;
 public class ShareApplication extends Application implements ReactApplication {
  private final ReactNativeHost mReactNativeHost = new ReactNativeHost(this) {
    @Override
-   public boolean getUseDeveloperSupport() {
+   protected boolean getUseDeveloperSupport() {
      return BuildConfig.DEBUG;
 
    }
@@ -287,7 +300,7 @@ public class MainApplication extends Application implements ReactApplication {
 
   private final ReactNativeHost mReactNativeHost = new ReactNativeHost(this) {
     @Override
-    protected boolean getUseDeveloperSupport() {
+    public boolean getUseDeveloperSupport() {
       return BuildConfig.DEBUG;
     }
 
@@ -321,11 +334,16 @@ public class MainApplication extends Application implements ReactApplication {
     android:theme="@style/Theme.Share.Transparent" >
    <intent-filter>
      <action android:name="android.intent.action.SEND" />
+     <action android:name="android.intent.action.SEND_MULTIPLE" />
      <category android:name="android.intent.category.DEFAULT" />
     //  for sharing links include
      <data android:mimeType="text/plain" />
-    //  for sharing photos include
-    <data android:mimeType="image/*" />
+     //  for sharing photos include
+     <data android:mimeType="image/*" />
+     //  for sharing videos include
+     <data android:mimeType="video/*"/>
+     //  for sharing audio include
+     <data android:mimeType="audio/*"/>
    </intent-filter>
 </activity>
 ```
@@ -366,7 +384,7 @@ and in `values/styles.xml`
 - Now you should be able to compile the code without any errors!
 
 > If you need to add more packages to your share extension, do not override
-`getPackages`, instead override the `getMorePackages` method under `ShareExActivity`.
+> `getPackages`, instead override the `getMorePackages` method under `ShareExActivity`.
 
 # Share Component
 
@@ -378,26 +396,26 @@ So in `index.ios.js` and `index.android.js` we are writing the same code:
 
 ```js
 //index.android.js
-import React from 'react'
-import { AppRegistry } from 'react-native'
+import React from 'react';
+import { AppRegistry } from 'react-native';
 
-import App from './app.android'
-import Share from './share.android'
+import App from './app.android';
+import Share from './share.android';
 
-AppRegistry.registerComponent('Sample1', () => App)
-AppRegistry.registerComponent('MyShareEx', () => Share) // TODO: Replace MyShareEx with my extension name
+AppRegistry.registerComponent('Sample1', () => App);
+AppRegistry.registerComponent('MyShareEx', () => Share); // TODO: Replace MyShareEx with my extension name
 ```
 
 ```js
 //index.ios.js
-import React from 'react'
-import { AppRegistry } from 'react-native'
+import React from 'react';
+import { AppRegistry } from 'react-native';
 
-import App from './app.ios'
-import Share from './share.ios'
+import App from './app.ios';
+import Share from './share.ios';
 
-AppRegistry.registerComponent('Sample1', () => App)
-AppRegistry.registerComponent('MyShareEx', () => Share) // TODO: Replace MyShareEx with my extension name
+AppRegistry.registerComponent('Sample1', () => App);
+AppRegistry.registerComponent('MyShareEx', () => Share); // TODO: Replace MyShareEx with my extension name
 ```
 
 So the `app.ios` and `app.android.js` refers to main app and `share.ios.js` and `share.android.js` refers to share extension.
@@ -405,7 +423,6 @@ So the `app.ios` and `app.android.js` refers to main app and `share.ios.js` and 
 # Share Extension APIs
 
 - `data()` is a function that returns a promise. Once the promise is resolved, you get two values, `type` and `value`.
-
 
 ```js
 import ShareExtension from 'react-native-share-extension'
@@ -445,7 +462,6 @@ or in Objective-C:
 }
 ```
 
-
 # Test on Device without dev-server
 
 Because a share extension in ios is treated as a separate container, they do not have access to main app folder. A resolution for this is that you have to build the script twice and package it inside the share extension container. The easiest way of doing this is create a `New Script Phase` in `Build Phases` of your share extension and copy the following line
@@ -462,7 +478,6 @@ export NODE_BINARY=node
 <p align="center">
     <img src ="https://raw.githubusercontent.com/alinz/react-native-share-extension/master/assets/ios_step_17.png" />
 </p>
-
 
 # App and app extension bundles
 
@@ -491,6 +506,7 @@ The app extension target builds pre-loaded bundle and is copied to the app targe
 `BundleCopied` = true
 
 #### app target's "Bundle React Native code and images" phase
+
 ```
 export NODE_BINARY=node
 ../bin/react-native-xcode.sh
@@ -503,6 +519,7 @@ export NODE_BINARY=node
 `BundleForced` = true
 
 #### appShareExtension target's "Bundle React Native code and images" phase
+
 ```
 cd ../
 npm run cp-native-assets
@@ -524,6 +541,7 @@ Build time can be halved while debugging by disabling the bundle for whichever t
 `BundleEntryFilename` = 'index.js'
 
 #### app target's "Bundle React Native code and images" phase
+
 ```
 export NODE_BINARY=node
 #export ENTRY_FILENAME=index
@@ -537,6 +555,7 @@ export NODE_BINARY=node
 `BundleForced` = true
 
 #### appShareExtension target's "Bundle React Native code and images" phase
+
 ```
 cd ../
 npm run cp-native-assets
@@ -546,9 +565,11 @@ export NODE_BINARY=node
 ```
 
 # Open container app
+
 Steps needed to open the host application from the share extension.
-1) Allow your app to be opened via URL Scheme - [Learn more](https://medium.com/react-native-training/deep-linking-your-react-native-app-d87c39a1ad5e)
-2) In xcode, select share extension and go to Build Settings and set **Require Only App-Extension-Safe API** to `NO`.
+
+1. Allow your app to be opened via URL Scheme - [Learn more](https://medium.com/react-native-training/deep-linking-your-react-native-app-d87c39a1ad5e)
+2. In xcode, select share extension and go to Build Settings and set **Require Only App-Extension-Safe API** to `NO`.
 
 Then you can open your app from the share extension by calling openURL:
 
