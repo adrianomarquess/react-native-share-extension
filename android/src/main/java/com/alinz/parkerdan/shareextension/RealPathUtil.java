@@ -17,7 +17,7 @@ import java.io.InputStream;
 import java.util.UUID;
 
 public class RealPathUtil {
- public static String getRealPathFromURI(final Context context, final Uri uri) {
+ public static String getRealPathFromURI(final Context context, final Uri uri, String fileExtension) {
 
      final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
      // DocumentProvider
@@ -68,7 +68,7 @@ public class RealPathUtil {
      }
      // MediaStore (and general)
      else if ("content".equalsIgnoreCase(uri.getScheme())) {
-         return getImagePath(context, uri);
+         return getImagePath(context, uri, fileExtension);
      }
      // File
      else if ("file".equalsIgnoreCase(uri.getScheme())) {
@@ -138,20 +138,20 @@ public class RealPathUtil {
      return "com.android.providers.media.documents".equals(uri.getAuthority());
  }
 
- public static String getImagePath(Context context, Uri uri){
+ public static String getImagePath(Context context, Uri uri, String fileExtension){
      if (isGoogleOldPhotosUri(uri)) {
          // return http path, then download file.
          return uri.getLastPathSegment();
      } else if (isGoogleNewPhotosUri(uri) || isMMSFile(uri) || isWhatsappFile(uri)) {
          // copy from uri. context.getContentResolver().openInputStream(uri);
-         return copyFile(context, uri);
+         return copyFile(context, uri, fileExtension);
      }
      final String dataColumn;
      dataColumn = getDataColumn(context, uri, null, null);
      if (dataColumn != null){
          return dataColumn;
      } else {
-        return copyFile(context, uri);
+        return copyFile(context, uri, fileExtension);
      }
  }
 
@@ -176,18 +176,33 @@ public class RealPathUtil {
     return "com.whatsapp.provider.media".equals(uri.getAuthority());
 }
 
- private static String copyFile(Context context, Uri uri) {
+ private static String copyFile(Context context, Uri uri, String fileExtension) {
 
     String filePath;
     InputStream inputStream = null;
     BufferedOutputStream outStream = null;
+    String extension;
+
+    switch (fileExtension) {
+        case "image/jpeg":
+            extension = ".jpg";
+            break;
+        case "image/png":
+            extension = ".png";
+            break;
+        case "application/pdf":
+            extension = ".pdf";
+            break;
+        default:
+            extension = ".jpg";
+    }
+
     try {
         inputStream = context.getContentResolver().openInputStream(uri);
 
         File extDir = context.getExternalFilesDir(null);
-        filePath = extDir.getAbsolutePath() + "/IMG_" + UUID.randomUUID().toString() + ".jpg";
-        outStream = new BufferedOutputStream(new FileOutputStream
-                (filePath));
+        filePath = extDir.getAbsolutePath() + "/IMG_" + UUID.randomUUID().toString() + extension;
+        outStream = new BufferedOutputStream(new FileOutputStream(filePath));
 
         byte[] buf = new byte[2048];
         int len;

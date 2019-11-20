@@ -43,9 +43,8 @@ public class ShareModule extends ReactContextBaseJavaModule {
     public WritableArray processIntent() {
         WritableArray dataArrayMap = Arguments.createArray();
         Set<String> mediaTypesSupported = new HashSet<String>();
-        mediaTypesSupported.add("video");
-        mediaTypesSupported.add("audio");
         mediaTypesSupported.add("image");
+        mediaTypesSupported.add("application/pdf");
 
         String type = "";
         String action = "";
@@ -57,29 +56,30 @@ public class ShareModule extends ReactContextBaseJavaModule {
             Intent intent = currentActivity.getIntent();
             action = intent.getAction();
             type = intent.getType();
+
             if (type == null) {
                 type = "";
             } else {
                 typePart = type.substring(0, type.indexOf('/'));
             }
+
             if (Intent.ACTION_SEND.equals(action) && "text/plain".equals(type)) {
                 WritableMap dataMap = Arguments.createMap();
                 dataMap.putString("type", type);
                 dataMap.putString("value", intent.getStringExtra(Intent.EXTRA_TEXT));
                 dataArrayMap.pushMap(dataMap);
-            } else if (Intent.ACTION_SEND.equals(action) && (
-                    mediaTypesSupported.contains(typePart))) {
+            } else if (Intent.ACTION_SEND.equals(action) && (mediaTypesSupported.contains(typePart) || mediaTypesSupported.contains(type))) {
                 WritableMap dataMap = Arguments.createMap();
                 dataMap.putString("type", type);
                 Uri uri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
-                dataMap.putString("value", "file://" + RealPathUtil.getRealPathFromURI(currentActivity, uri));
+                dataMap.putString("value", "file://" + RealPathUtil.getRealPathFromURI(currentActivity, uri, type));
                 dataArrayMap.pushMap(dataMap);
             } else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && mediaTypesSupported.contains(typePart)) {
                 ArrayList<Uri> uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
                 for (Uri uri : uris) {
                     WritableMap dataMap = Arguments.createMap();
                     dataMap.putString("type", type);
-                    dataMap.putString("value", "file://" + RealPathUtil.getRealPathFromURI(currentActivity, uri));
+                    dataMap.putString("value", "file://" + RealPathUtil.getRealPathFromURI(currentActivity, uri, type));
                     dataArrayMap.pushMap(dataMap);
                 }
             }
